@@ -1,6 +1,5 @@
 require("dotenv").config();
 
-// 🔥 FORCE IPV4 FIRST (CRITICAL)
 const dns = require("dns");
 dns.setDefaultResultOrder("ipv4first");
 
@@ -13,8 +12,14 @@ const app = express();
 
 const PORT = process.env.PORT || 3000;
 const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
-const stripe = Stripe(process.env.STRIPE_SECRET);
 
+// 🔥 DEBUG CHECK
+console.log("STRIPE KEY EXISTS:", !!process.env.STRIPE_SECRET);
+console.log("EMAIL EXISTS:", !!process.env.EMAIL);
+console.log("PASS EXISTS:", !!process.env.PASS);
+
+// 🔥 STRIPE INIT (WILL FAIL IF KEY MISSING)
+const stripe = Stripe(process.env.STRIPE_SECRET);
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -26,21 +31,11 @@ app.get("/", (req, res) => {
 });
 
 
-// 📩 CONTACT EMAIL (FINAL FIX)
+// 📩 EMAIL
 app.post("/contact", async (req, res) => {
   try {
-    console.log("📩 CONTACT HIT:", req.body);
-
     const { name, email, message } = req.body;
 
-    if (!name || !email || !message) {
-      return res.status(400).json({
-        success: false,
-        error: "Missing fields"
-      });
-    }
-
-    // 🔥 WORKING TRANSPORTER (IPv4 + PORT 587 FIX)
     const transporter = nodemailer.createTransport({
       host: "smtp.gmail.com",
       port: 587,
@@ -52,24 +47,19 @@ app.post("/contact", async (req, res) => {
       }
     });
 
-    const info = await transporter.sendMail({
+    await transporter.sendMail({
       from: process.env.EMAIL,
       to: process.env.EMAIL,
       subject: "New Client: " + name,
       text: `From: ${email}\n\n${message}`
     });
 
-    console.log("✅ EMAIL SENT:", info.response);
-
+    console.log("✅ EMAIL SENT");
     res.json({ success: true });
 
   } catch (err) {
     console.error("❌ EMAIL ERROR:", err);
-
-    res.status(500).json({
-      success: false,
-      error: err.message
-    });
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
@@ -85,12 +75,6 @@ app.post("/create-checkout-session", async (req, res) => {
       advanced: 50000
     };
 
-    const names = {
-      basic: "Basic Website",
-      business: "Business Website",
-      advanced: "Advanced Website"
-    };
-
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       payment_method_types: ["card"],
@@ -98,7 +82,7 @@ app.post("/create-checkout-session", async (req, res) => {
         price_data: {
           currency: "usd",
           product_data: {
-            name: names[plan]
+            name: plan + " website"
           },
           unit_amount: prices[plan]
         },
@@ -117,7 +101,7 @@ app.post("/create-checkout-session", async (req, res) => {
 });
 
 
-// 🚀 START SERVER
+// START
 app.listen(PORT, () => {
   console.log(`🚀 Running on ${BASE_URL}`);
 });
