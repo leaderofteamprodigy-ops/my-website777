@@ -1,5 +1,8 @@
 require("dotenv").config();
 
+// 🔥 FORCE IPV4 (extra safety)
+require("dns").setDefaultResultOrder("ipv4first");
+
 const express = require("express");
 const path = require("path");
 const nodemailer = require("nodemailer");
@@ -11,33 +14,39 @@ const PORT = process.env.PORT || 3000;
 const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
 const stripe = Stripe(process.env.STRIPE_SECRET);
 
+// Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public"));
 
+// Home
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
+
+// 📩 CONTACT EMAIL (IPV4 FIXED)
 app.post("/contact", async (req, res) => {
   try {
     console.log("📩 CONTACT HIT:", req.body);
-    console.log("EMAIL ENV EXISTS:", !!process.env.EMAIL);
-    console.log("PASS ENV EXISTS:", !!process.env.PASS);
+    console.log("EMAIL ENV:", !!process.env.EMAIL);
+    console.log("PASS ENV:", !!process.env.PASS);
 
     const { name, email, message } = req.body;
 
     if (!name || !email || !message) {
       return res.status(400).json({
         success: false,
-        error: "Missing required fields"
+        error: "Missing fields"
       });
     }
 
+    // 🔥 FIXED TRANSPORTER
     const transporter = nodemailer.createTransport({
       host: "smtp.gmail.com",
       port: 465,
       secure: true,
+      family: 4, // ✅ FORCE IPV4 (MAIN FIX)
       auth: {
         user: process.env.EMAIL,
         pass: process.env.PASS
@@ -47,26 +56,28 @@ app.post("/contact", async (req, res) => {
     const info = await transporter.sendMail({
       from: process.env.EMAIL,
       to: process.env.EMAIL,
-      subject: `New Client: ${name}`,
+      subject: "New Client: " + name,
       text: `From: ${email}\n\n${message}`
     });
 
     console.log("✅ EMAIL SENT:", info.response);
 
     res.json({ success: true });
+
   } catch (err) {
     console.error("❌ EMAIL ERROR:", err);
     res.status(500).json({
       success: false,
-      error: err.message || "Email failed"
+      error: err.message
     });
   }
 });
 
+
+// 💳 STRIPE
 app.post("/create-checkout-session", async (req, res) => {
   try {
-    console.log("💳 REQUEST BODY:", req.body);
-    console.log("STRIPE ENV EXISTS:", !!process.env.STRIPE_SECRET);
+    console.log("💳 REQUEST:", req.body);
 
     const plan = req.body?.plan || "basic";
 
@@ -89,33 +100,32 @@ app.post("/create-checkout-session", async (req, res) => {
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       payment_method_types: ["card"],
-      line_items: [
-        {
-          price_data: {
-            currency: "usd",
-            product_data: {
-              name: names[plan]
-            },
-            unit_amount: prices[plan]
+      line_items: [{
+        price_data: {
+          currency: "usd",
+          product_data: {
+            name: names[plan]
           },
-          quantity: 1
-        }
-      ],
+          unit_amount: prices[plan]
+        },
+        quantity: 1
+      }],
       success_url: `${BASE_URL}/?success=true`,
       cancel_url: `${BASE_URL}/?canceled=true`
     });
 
-    console.log("✅ SESSION CREATED:", session.id);
+    console.log("✅ SESSION:", session.id);
 
     res.json({ id: session.id });
+
   } catch (err) {
     console.error("❌ STRIPE ERROR:", err);
-    res.status(500).json({
-      error: err.message || "Stripe failed"
-    });
+    res.status(500).json({ error: err.message });
   }
 });
 
+
+// 🚀 START SERVER
 app.listen(PORT, () => {
   console.log(`🚀 Running on ${BASE_URL}`);
 });
