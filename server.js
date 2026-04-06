@@ -1,7 +1,8 @@
 require("dotenv").config();
 
-// 🔥 FORCE IPV4 (extra safety)
-require("dns").setDefaultResultOrder("ipv4first");
+// 🔥 FORCE IPV4 FIRST (CRITICAL)
+const dns = require("dns");
+dns.setDefaultResultOrder("ipv4first");
 
 const express = require("express");
 const path = require("path");
@@ -25,12 +26,10 @@ app.get("/", (req, res) => {
 });
 
 
-// 📩 CONTACT EMAIL (IPV4 FIXED)
+// 📩 CONTACT EMAIL (FINAL FIX)
 app.post("/contact", async (req, res) => {
   try {
     console.log("📩 CONTACT HIT:", req.body);
-    console.log("EMAIL ENV:", !!process.env.EMAIL);
-    console.log("PASS ENV:", !!process.env.PASS);
 
     const { name, email, message } = req.body;
 
@@ -41,12 +40,12 @@ app.post("/contact", async (req, res) => {
       });
     }
 
-    // 🔥 FIXED TRANSPORTER
+    // 🔥 WORKING TRANSPORTER (IPv4 + PORT 587 FIX)
     const transporter = nodemailer.createTransport({
       host: "smtp.gmail.com",
-      port: 465,
-      secure: true,
-      family: 4, // ✅ FORCE IPV4 (MAIN FIX)
+      port: 587,
+      secure: false,
+      requireTLS: true,
       auth: {
         user: process.env.EMAIL,
         pass: process.env.PASS
@@ -66,6 +65,7 @@ app.post("/contact", async (req, res) => {
 
   } catch (err) {
     console.error("❌ EMAIL ERROR:", err);
+
     res.status(500).json({
       success: false,
       error: err.message
@@ -77,8 +77,6 @@ app.post("/contact", async (req, res) => {
 // 💳 STRIPE
 app.post("/create-checkout-session", async (req, res) => {
   try {
-    console.log("💳 REQUEST:", req.body);
-
     const plan = req.body?.plan || "basic";
 
     const prices = {
@@ -92,10 +90,6 @@ app.post("/create-checkout-session", async (req, res) => {
       business: "Business Website",
       advanced: "Advanced Website"
     };
-
-    if (!prices[plan]) {
-      return res.status(400).json({ error: "Invalid plan" });
-    }
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
@@ -113,8 +107,6 @@ app.post("/create-checkout-session", async (req, res) => {
       success_url: `${BASE_URL}/?success=true`,
       cancel_url: `${BASE_URL}/?canceled=true`
     });
-
-    console.log("✅ SESSION:", session.id);
 
     res.json({ id: session.id });
 
