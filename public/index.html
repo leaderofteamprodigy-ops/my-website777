@@ -1,6 +1,8 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Prodigy Elite</title>
 
   <style>
@@ -15,196 +17,291 @@
 
     canvas {
       position: fixed;
-      top: 0;
-      left: 0;
+      inset: 0;
       z-index: -1;
+    }
+
+    #intro {
+      position: fixed;
+      inset: 0;
+      background: black;
+      color: #00ff88;
+      z-index: 9999;
+      padding: 20px;
+      text-align: left;
+    }
+
+    #terminal {
+      white-space: pre-line;
+      font-size: 16px;
+    }
+
+    header {
+      padding-top: 80px;
     }
 
     .logo {
       font-size: 60px;
-      text-shadow: 0 0 20px #00ff88;
+      text-shadow: 0 0 20px #00ff88, 0 0 40px #00ff88;
+      animation: pulse 2s infinite alternate;
+    }
+
+    @keyframes pulse {
+      from { opacity: 0.75; }
+      to { opacity: 1; }
+    }
+
+    .cards {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      padding: 10px 20px 30px;
     }
 
     .card {
       border: 1px solid #00ff88;
       padding: 20px;
-      margin: 10px;
-      display: inline-block;
+      width: 240px;
+      background: rgba(0, 255, 136, 0.04);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 0 18px rgba(0, 255, 136, 0.5);
     }
 
     button {
-      padding: 10px;
+      padding: 10px 16px;
       background: black;
       color: #00ff88;
       border: 1px solid #00ff88;
       cursor: pointer;
+      font-family: monospace;
     }
 
-    input, textarea {
+    button:hover {
+      background: #00ff88;
+      color: black;
+    }
+
+    form {
+      padding-bottom: 40px;
+    }
+
+    input,
+    textarea {
+      width: 260px;
+      max-width: 90vw;
       background: black;
       color: #00ff88;
       border: 1px solid #00ff88;
-      margin: 5px;
-      padding: 8px;
+      margin: 6px 0;
+      padding: 10px;
+      font-family: monospace;
     }
 
-    #intro {
-      position: fixed;
-      width: 100%;
-      height: 100%;
-      background: black;
-      color: #00ff88;
-      z-index: 9999;
-      padding: 20px;
+    textarea {
+      min-height: 110px;
+      resize: vertical;
+    }
+
+    .status {
+      min-height: 24px;
+      margin-top: 10px;
     }
   </style>
 </head>
-
 <body>
 
-<!-- 🔥 HACKER INTRO -->
-<div id="intro">
-  <pre id="terminal"></pre>
-</div>
+  <div id="intro">
+    <pre id="terminal"></pre>
+  </div>
 
-<canvas id="matrix"></canvas>
+  <canvas id="matrix"></canvas>
 
-<h1 class="logo">PRODIGY</h1>
+  <header>
+    <h1 class="logo">PRODIGY</h1>
+    <p>Elite Cyber Web Agency</p>
+  </header>
 
-<h2>Pricing</h2>
+  <section>
+    <h2>Pricing</h2>
+    <div class="cards">
+      <div class="card">
+        <h3>Basic - $50</h3>
+        <p>Starter website package</p>
+        <button type="button" onclick="buy('basic')">Buy</button>
+      </div>
 
-<div class="card">
-  <h3>Basic - $100</h3>
-  <button onclick="buy('basic')">Buy</button>
-</div>
+      <div class="card">
+        <h3>Business - $300</h3>
+        <p>Business website package</p>
+        <button type="button" onclick="buy('business')">Buy</button>
+      </div>
 
-<div class="card">
-  <h3>Business - $300</h3>
-  <button onclick="buy('business')">Buy</button>
-</div>
+      <div class="card">
+        <h3>Advanced - $500</h3>
+        <p>Advanced website package</p>
+        <button type="button" onclick="buy('advanced')">Buy</button>
+      </div>
+    </div>
+  </section>
 
-<div class="card">
-  <h3>Advanced - $500</h3>
-  <button onclick="buy('advanced')">Buy</button>
-</div>
+  <section>
+    <h2>Contact</h2>
 
-<h2>Contact</h2>
+    <form id="contactForm">
+      <input id="name" name="name" placeholder="Name" required />
+      <br />
+      <input id="email" name="email" type="email" placeholder="Email" required />
+      <br />
+      <textarea id="message" name="message" placeholder="Message" required></textarea>
+      <br />
+      <button type="submit">Send</button>
+    </form>
 
-<form id="contactForm">
-  <input id="name" placeholder="Name"><br>
-  <input id="email" placeholder="Email"><br>
-  <textarea id="message" placeholder="Message"></textarea><br>
-  <button type="submit">Send</button>
-</form>
+    <div class="status" id="contactStatus"></div>
+  </section>
 
-<!-- 🔊 AUDIO -->
-<audio id="clickSound" src="https://assets.mixkit.co/sfx/preview/mixkit-select-click-1109.mp3"></audio>
+  <audio id="clickSound" src="https://assets.mixkit.co/sfx/preview/mixkit-select-click-1109.mp3"></audio>
 
-<script src="https://js.stripe.com/v3/"></script>
+  <script src="https://js.stripe.com/v3/"></script>
+  <script>
+    const stripe = Stripe("pk_test_51TJ1iTDzBmowGtpht0MLdpWHmEook2L7S5hEthx2tEcT9nsItslgTIWuK9yzc1FxkzR9f1Boi8dkAU7d2ToIBfrF0084ukjJZA");
+    const clickSound = document.getElementById("clickSound");
+    const contactStatus = document.getElementById("contactStatus");
 
-<script>
-// 🔥 STRIPE KEY
-const stripe = Stripe("pk_test_51TJ1iTDzBmowGtpht0MLdpWHmEook2L7S5hEthx2tEcT9nsItslgTIWuK9yzc1FxkzR9f1Boi8dkAU7d2ToIBfrF0084ukjJZA");
+    let soundEnabled = false;
 
-// 🔊 SOUND UNLOCK
-let soundEnabled = false;
-const clickSound = document.getElementById("clickSound");
+    document.addEventListener("click", () => {
+      soundEnabled = true;
+    }, { once: true });
 
-document.addEventListener("click", () => {
-  soundEnabled = true;
-});
+    function playClick() {
+      if (!soundEnabled) return;
+      clickSound.currentTime = 0;
+      clickSound.play().catch(() => {});
+    }
 
-// 💳 BUY
-async function buy(plan) {
-  if (soundEnabled) {
-    clickSound.currentTime = 0;
-    clickSound.play().catch(()=>{});
-  }
+    async function buy(plan) {
+      try {
+        playClick();
 
-  const res = await fetch("/create-checkout-session", {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({ plan })
-  });
+        const res = await fetch("/create-checkout-session", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ plan })
+        });
 
-  const data = await res.json();
+        const data = await res.json();
+        console.log("STRIPE RESPONSE:", data);
 
-  if (data.id) {
-    stripe.redirectToCheckout({ sessionId: data.id });
-  } else {
-    alert("Payment failed");
-    console.log(data);
-  }
-}
+        if (data.id) {
+          await stripe.redirectToCheckout({ sessionId: data.id });
+        } else {
+          alert("Payment failed: " + (data.error || "unknown error"));
+        }
+      } catch (err) {
+        console.error("BUY ERROR:", err);
+        alert("Payment failed");
+      }
+    }
 
-// 📩 CONTACT
-document.getElementById("contactForm").addEventListener("submit", async (e) => {
-  e.preventDefault();
+    document.getElementById("contactForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
 
-  await fetch("/contact", {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({
-      name: name.value,
-      email: email.value,
-      message: message.value
-    })
-  });
+      try {
+        playClick();
+        contactStatus.textContent = "Sending...";
 
-  alert("Message sent!");
-});
+        const res = await fetch("/contact", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            name: document.getElementById("name").value.trim(),
+            email: document.getElementById("email").value.trim(),
+            message: document.getElementById("message").value.trim()
+          })
+        });
 
-// 🔥 MATRIX
-const canvas = document.getElementById("matrix");
-const ctx = canvas.getContext("2d");
+        const data = await res.json();
+        console.log("CONTACT RESPONSE:", data);
 
-canvas.height = window.innerHeight;
-canvas.width = window.innerWidth;
+        if (data.success) {
+          contactStatus.textContent = "Message sent!";
+          document.getElementById("contactForm").reset();
+        } else {
+          contactStatus.textContent = "Email failed: " + (data.error || "unknown error");
+        }
+      } catch (err) {
+        console.error("CONTACT ERROR:", err);
+        contactStatus.textContent = "Email failed";
+      }
+    });
 
-const drops = Array(100).fill(1);
+    const canvas = document.getElementById("matrix");
+    const ctx = canvas.getContext("2d");
 
-setInterval(() => {
-  ctx.fillStyle = "rgba(0,0,0,0.05)";
-  ctx.fillRect(0,0,canvas.width,canvas.height);
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
 
-  ctx.fillStyle = "#00ff88";
+    resizeCanvas();
+    window.addEventListener("resize", resizeCanvas);
 
-  drops.forEach((y, i) => {
-    const text = Math.random() > 0.5 ? "0" : "1";
-    ctx.fillText(text, i*20, y*20);
+    const drops = Array(120).fill(1);
 
-    if (y*20 > canvas.height) drops[i]=0;
-    drops[i]++;
-  });
-}, 33);
+    setInterval(() => {
+      ctx.fillStyle = "rgba(0, 0, 0, 0.05)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-// 🧠 HACKER INTRO
-const lines = [
-  "Initializing system...",
-  "Bypassing firewall...",
-  "Accessing nodes...",
-  "Decrypting...",
-  "Access Granted ✔",
-  "Launching PRODIGY..."
-];
+      ctx.fillStyle = "#00ff88";
+      ctx.font = "16px monospace";
 
-let i = 0;
-const terminal = document.getElementById("terminal");
+      drops.forEach((y, i) => {
+        const text = Math.random() > 0.5 ? "0" : "1";
+        ctx.fillText(text, i * 20, y * 20);
 
-function typeLine() {
-  if (i < lines.length) {
-    terminal.innerHTML += lines[i] + "\n";
-    i++;
-    setTimeout(typeLine, 700);
-  } else {
-    setTimeout(() => {
-      document.getElementById("intro").style.display = "none";
-    }, 1000);
-  }
-}
+        if (y * 20 > canvas.height && Math.random() > 0.975) {
+          drops[i] = 0;
+        }
 
-typeLine();
-</script>
+        drops[i]++;
+      });
+    }, 33);
 
+    const lines = [
+      "Initializing system...",
+      "Bypassing firewall...",
+      "Accessing nodes...",
+      "Decrypting...",
+      "Access Granted ✔",
+      "Launching PRODIGY..."
+    ];
+
+    const terminal = document.getElementById("terminal");
+    let i = 0;
+
+    function typeLine() {
+      if (i < lines.length) {
+        terminal.textContent += lines[i] + "\n";
+        i++;
+        setTimeout(typeLine, 700);
+      } else {
+        setTimeout(() => {
+          document.getElementById("intro").style.display = "none";
+        }, 1000);
+      }
+    }
+
+    typeLine();
+  </script>
 </body>
 </html>

@@ -7,6 +7,8 @@ const Stripe = require("stripe");
 
 const app = express();
 
+const PORT = process.env.PORT || 3000;
+const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
 const stripe = Stripe(process.env.STRIPE_SECRET);
 
 app.use(express.json());
@@ -19,6 +21,10 @@ app.get("/", (req, res) => {
 
 app.post("/contact", async (req, res) => {
   try {
+    console.log("📩 CONTACT HIT:", req.body);
+    console.log("EMAIL ENV EXISTS:", !!process.env.EMAIL);
+    console.log("PASS ENV EXISTS:", !!process.env.PASS);
+
     const { name, email, message } = req.body;
 
     if (!name || !email || !message) {
@@ -29,32 +35,39 @@ app.post("/contact", async (req, res) => {
     }
 
     const transporter = nodemailer.createTransport({
-      service: "gmail",
+      host: "smtp.gmail.com",
+      port: 465,
+      secure: true,
       auth: {
         user: process.env.EMAIL,
         pass: process.env.PASS
       }
     });
 
-    await transporter.sendMail({
+    const info = await transporter.sendMail({
       from: process.env.EMAIL,
       to: process.env.EMAIL,
-      subject: "New Client: " + name,
+      subject: `New Client: ${name}`,
       text: `From: ${email}\n\n${message}`
     });
 
+    console.log("✅ EMAIL SENT:", info.response);
+
     res.json({ success: true });
   } catch (err) {
-    console.error("EMAIL ERROR:", err);
+    console.error("❌ EMAIL ERROR:", err);
     res.status(500).json({
       success: false,
-      error: "Email failed"
+      error: err.message || "Email failed"
     });
   }
 });
 
 app.post("/create-checkout-session", async (req, res) => {
   try {
+    console.log("💳 REQUEST BODY:", req.body);
+    console.log("STRIPE ENV EXISTS:", !!process.env.STRIPE_SECRET);
+
     const plan = req.body?.plan || "basic";
 
     const prices = {
@@ -70,13 +83,8 @@ app.post("/create-checkout-session", async (req, res) => {
     };
 
     if (!prices[plan]) {
-      return res.status(400).json({
-        error: "Invalid plan"
-      });
+      return res.status(400).json({ error: "Invalid plan" });
     }
-
-    const baseUrl =
-      process.env.BASE_URL || `http://localhost:${process.env.PORT || 3000}`;
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
@@ -93,21 +101,21 @@ app.post("/create-checkout-session", async (req, res) => {
           quantity: 1
         }
       ],
-      success_url: `${baseUrl}/?success=true`,
-      cancel_url: `${baseUrl}/?canceled=true`
+      success_url: `${BASE_URL}/?success=true`,
+      cancel_url: `${BASE_URL}/?canceled=true`
     });
+
+    console.log("✅ SESSION CREATED:", session.id);
 
     res.json({ id: session.id });
   } catch (err) {
-    console.error("STRIPE ERROR:", err);
+    console.error("❌ STRIPE ERROR:", err);
     res.status(500).json({
       error: err.message || "Stripe failed"
     });
   }
 });
 
-const PORT = process.env.PORT || 3000;
-
 app.listen(PORT, () => {
-  console.log(`🚀 Running on port ${PORT}`);
+  console.log(`🚀 Running on ${BASE_URL}`);
 });
