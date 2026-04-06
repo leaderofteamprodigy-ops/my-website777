@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Prodigy Elite</title>
+
+  <style>
+    body {
+      margin: 0;
+      background: black;
+      color: #00ff88;
+      font-family: monospace;
+      text-align: center;
+      overflow-x: hidden;
+    }
+
+    canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: -1;
+    }
+
+    .logo {
+      font-size: 60px;
+      text-shadow: 0 0 20px #00ff88;
+    }
+
+    .card {
+      border: 1px solid #00ff88;
+      padding: 20px;
+      margin: 10px;
+      display: inline-block;
+    }
+
+    button {
+      padding: 10px;
+      background: black;
+      color: #00ff88;
+      border: 1px solid #00ff88;
+      cursor: pointer;
+    }
+
+    input, textarea {
+      background: black;
+      color: #00ff88;
+      border: 1px solid #00ff88;
+      margin: 5px;
+      padding: 8px;
+    }
+
+    #intro {
+      position: fixed;
+      width: 100%;
+      height: 100%;
+      background: black;
+      color: #00ff88;
+      z-index: 9999;
+      padding: 20px;
+    }
+  </style>
+</head>
+
+<body>
+
+<!-- 🔥 HACKER INTRO -->
+<div id="intro">
+  <pre id="terminal"></pre>
+</div>
+
+<canvas id="matrix"></canvas>
+
+<h1 class="logo">PRODIGY</h1>
+
+<h2>Pricing</h2>
+
+<div class="card">
+  <h3>Basic - $100</h3>
+  <button onclick="buy('basic')">Buy</button>
+</div>
+
+<div class="card">
+  <h3>Business - $300</h3>
+  <button onclick="buy('business')">Buy</button>
+</div>
+
+<div class="card">
+  <h3>Advanced - $500</h3>
+  <button onclick="buy('advanced')">Buy</button>
+</div>
+
+<h2>Contact</h2>
+
+<form id="contactForm">
+  <input id="name" placeholder="Name"><br>
+  <input id="email" placeholder="Email"><br>
+  <textarea id="message" placeholder="Message"></textarea><br>
+  <button type="submit">Send</button>
+</form>
+
+<!-- 🔊 AUDIO -->
+<audio id="clickSound" src="https://assets.mixkit.co/sfx/preview/mixkit-select-click-1109.mp3"></audio>
+
+<script src="https://js.stripe.com/v3/"></script>
+
+<script>
+// 🔥 STRIPE KEY
+const stripe = Stripe("pk_test_51TJ1iTDzBmowGtpht0MLdpWHmEook2L7S5hEthx2tEcT9nsItslgTIWuK9yzc1FxkzR9f1Boi8dkAU7d2ToIBfrF0084ukjJZA");
+
+// 🔊 SOUND UNLOCK
+let soundEnabled = false;
+const clickSound = document.getElementById("clickSound");
+
+document.addEventListener("click", () => {
+  soundEnabled = true;
+});
+
+// 💳 BUY
+async function buy(plan) {
+  if (soundEnabled) {
+    clickSound.currentTime = 0;
+    clickSound.play().catch(()=>{});
+  }
+
+  const res = await fetch("/create-checkout-session", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({ plan })
+  });
+
+  const data = await res.json();
+
+  if (data.id) {
+    stripe.redirectToCheckout({ sessionId: data.id });
+  } else {
+    alert("Payment failed");
+    console.log(data);
+  }
+}
+
+// 📩 CONTACT
+document.getElementById("contactForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  await fetch("/contact", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({
+      name: name.value,
+      email: email.value,
+      message: message.value
+    })
+  });
+
+  alert("Message sent!");
+});
+
+// 🔥 MATRIX
+const canvas = document.getElementById("matrix");
+const ctx = canvas.getContext("2d");
+
+canvas.height = window.innerHeight;
+canvas.width = window.innerWidth;
+
+const drops = Array(100).fill(1);
+
+setInterval(() => {
+  ctx.fillStyle = "rgba(0,0,0,0.05)";
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  ctx.fillStyle = "#00ff88";
+
+  drops.forEach((y, i) => {
+    const text = Math.random() > 0.5 ? "0" : "1";
+    ctx.fillText(text, i*20, y*20);
+
+    if (y*20 > canvas.height) drops[i]=0;
+    drops[i]++;
+  });
+}, 33);
+
+// 🧠 HACKER INTRO
+const lines = [
+  "Initializing system...",
+  "Bypassing firewall...",
+  "Accessing nodes...",
+  "Decrypting...",
+  "Access Granted ✔",
+  "Launching PRODIGY..."
+];
+
+let i = 0;
+const terminal = document.getElementById("terminal");
+
+function typeLine() {
+  if (i < lines.length) {
+    terminal.innerHTML += lines[i] + "\n";
+    i++;
+    setTimeout(typeLine, 700);
+  } else {
+    setTimeout(() => {
+      document.getElementById("intro").style.display = "none";
+    }, 1000);
+  }
+}
+
+typeLine();
+</script>
+
+</body>
+</html>
