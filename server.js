@@ -2,8 +2,8 @@ require("dotenv").config();
 
 const express = require("express");
 const path = require("path");
-const Stripe = require("stripe");
 const { Resend } = require("resend");
+const Stripe = require("stripe");
 
 const app = express();
 
